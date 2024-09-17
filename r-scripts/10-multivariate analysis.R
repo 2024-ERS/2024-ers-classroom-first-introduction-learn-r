@@ -24,12 +24,10 @@ elevdat
 
 # read the macrotransect clay thickness from the soil profile dataset
 claydat<-readr::read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vQyEg6KzIt6SdtSKLKbbL3AtPbVffq-Du-3RY9Xq0T9TwPRFcgvKAYKQx89CKWhpTKczPG9hKVGUfTw/pub?gid=943188085&single=true&output=csv") |>
-  dplyr::filter(Year==2024 & SoilType_ID %in% c("clay","clay-organic") & TransectPoint_ID<=900) |>
-  dplyr::select(TransectPoint_ID,corrected_depth) |>     
+  dplyr::filter(Year==2023, TransectPoint_ID<=1150, SoilType_ID=="clay_organic" |SoilType_ID=="clay")|>   dplyr::select(TransectPoint_ID,corrected_depth) |>     
   group_by(TransectPoint_ID) |> 
   dplyr::summarize(clay_cm=mean(corrected_depth,na.rm=T)) #calculate average clay layer thickness  for each pole
 claydat
-
 
 ##### read the flooding proportion (proportion of the time of  the growing season flooded)
 # from 1 april - 30 aug
@@ -74,7 +72,6 @@ envdat <-
 # for ordination with functions from the vegan library you need an separate environmental factors dataset
 # and a species composition dataset with the same rownames, indicating  the same sites / samples
 # the species data (community composition) need to be in wide format
-vegdat
 envdat
 
 ##### explore the correlations among the environmental factors in a panel pairs plot
