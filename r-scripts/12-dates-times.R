@@ -32,39 +32,17 @@ tail(dat_month,20) # note the definition of the metyear_nov and metyear_dec vari
 
 # plot monthly average temperature with 5-year running average
 dat_month %>% ggplot(aes(x=mdate,y=avgtemp_mo_oC)) +
-  geom_line() +
-  tidyquant::geom_ma(ma_fun=SMA,n=60,col="red",linetype="solid") +
-#  coord_x_date(xlim=c("2001-01-01", "2024-08-31")) +
-  ggtitle("temperature Lauwersoog") +
-  theme(text = element_text(size=20))
 
 # plot monthly rainfall with 1-year running average
 dat_month %>% ggplot(aes(x=mdate,y=totrain_mo_mm)) +
-  geom_line(linewidth=0.7) +
-  tidyquant::geom_ma(ma_fun=SMA,n=12,col="red",linetype="solid",linewidth=1) +
-  coord_x_date(xlim=c("2001-01-01", "2024-09-01")) +
-  xlab("date") +
-  ylab("total monthly rainfall") +
-  ggtitle("Lauwersoog") +
-  theme(text = element_text(size=20))
 
 # additive time series decomposition of the monthly mean temperatures: what is seasonal and what is a longterm trend?
-monthly_temps<-dat_month %>%
-  ungroup() %>%  # otherwise the grouping variables are kept
-#  filter(year!=2024)  %>% # only use complete years
-  select(avgtemp_mo_oC) 
 
-monthly_temps_ts<-ts(monthly_temps,frequency=12,start=c(2000,1))  # make time series object, with frequency and starting month
-monthly_temps_ts  #inspect time series object
-monthly_temp_comp <- decompose(monthly_temps_ts)  # decompose in time series components
-plot(monthly_temp_comp)   # plot the result
+  
 # note the trend component is the same as the 12 month running average from the previous plot
 # adjust the time series for the seasonal component, and plot it
-TempSeasonAdj <- monthly_temps_ts - monthly_temp_comp$seasonal
-plot(TempSeasonAdj,ylab="seasonally corrected temperature (oC)")
-grid(nx = NULL,  # add y gridlines
-     ny = NA,
-     lty = 2, col = "gray", lwd = 2)
+
+  
 # note again that really cold monthly temperatures (after seasonal correction) become rare, especially since since 2010
 # while really warm months (after seasonal correction) become more common from 1991 -2016, while declining a bit again since
 # to make the plots and do this in tidyverse style, you may want to explore the timetk package
@@ -72,72 +50,17 @@ grid(nx = NULL,  # add y gridlines
 
 
 # average temperature of the coldest month per meteorological year
-dat_metyear_dec<-dat_month %>%  # data for the meteorological year
-  dplyr::group_by(metyear_dec) %>%
-  summarize(minmonth=min(avgtemp_mo_oC,na.rm=T))  #annual  minimum  average monthlytemperature in oC
-tail(dat_metyear_dec,20)
-dat_metyear_dec %>%
-  ggplot(aes(x=metyear_dec,y=minmonth)) +
-#  geom_line(linewidth=0.7) +
-  geom_smooth() +
-  geom_point(size=3) +
-  ggtitle("average temperature of the coldest month per meteorological year  Lauwersoog") +
-  theme(text = element_text(size=12))
-# note that 2010 and 2011 were the last winters with a (on average) sub-zero month, 
+
+  # note that 2010 and 2011 were the last winters with a (on average) sub-zero month, 
 # potentially relevant for cockle recruitment (crabs stay on mudflats eating spatfall)
 
 # Hellmann index (sum of all below-zero daily average temperatures from 1 November of previous year until 31 march)
 # see https://nl.wikipedia.org/wiki/Koudegetal
-dat_Hellmann<-dat %>%  
-  dplyr::filter(month %in% c(11,12,1,2,3),
-                TG<0) %>%
-  dplyr::group_by(metyear_nov) %>%
-  summarize(Hellmann=sum(TG,na.rm=T))  #calculate Hellmann index
-tail(dat_Hellmann,20)
-dat_Hellmann %>%
-  ggplot(aes(x=metyear_nov,y=Hellmann)) +
-#  geom_line(size=1) +
-  geom_point(size=5) +
-  geom_smooth(method="lm",linewidth=2,fill="lightblue") +
-  xlab("winter (november - march)") +
-  ylab("Hellmann index") +
-  ggtitle("Winter cold index Lauwersoog station") +
-  theme(text = element_text(size=12))
+
 # 1997 was the last "Elfstedentocht"
 # 2014 -2024 (our transect study) is characterized by only warm winters
 
 # Warmth index
 library(quantreg)
-
 # see for calculation https://www.knmi.nl/nederland-nu/klimatologie/lijsten/warmtegetallen
-dat_WarmthIndex<-dat %>%  
-  dplyr::filter(month %in% 4:8,    #note: KNMI uses until oct, but this is more relevant for our transect (2nd week september)
-                TG>18) %>%
-  dplyr::group_by(year) %>%
-  summarize(WarmthIndex=sum(TG,na.rm=T))  #calculate Hellmann index
-tail(dat_WarmthIndex,20)
-
-# Fit quantile regression models at different quantiles
-fit_10 <- rq(WarmthIndex ~ year, data = dat_WarmthIndex, tau = 0.10)
-fit_50 <- rq(WarmthIndex ~ year, data = dat_WarmthIndex, tau = 0.50)
-fit_90 <- rq(WarmthIndex ~ year, data = dat_WarmthIndex, tau = 0.90)
-
-# Add predictions to dataframe
-dat_WarmthIndex$pred_q10 <- predict(fit_10, newdata = dat_WarmthIndex)
-dat_WarmthIndex$pred_q50 <- predict(fit_50, newdata = dat_WarmthIndex)
-dat_WarmthIndex$pred_q90 <- predict(fit_90, newdata = dat_WarmthIndex)
-
-
-dat_WarmthIndex %>%
-  ggplot(aes(x=year,y=WarmthIndex)) +
-  geom_point(size=3) +
-  geom_line(aes(x=year,y=pred_q10),col="blue",linewidth=1) +
-  geom_line(aes(x=year,y=pred_q50),col="orange",linewidth=1) +
-  geom_line(aes(x=year,y=pred_q90),col="red",linewidth=1) +
-  xlab("summer (april - august)") +
-  ylab("Warmth index") +
-  ggtitle("Warmth index Lauwersoog station") +
-  theme(text = element_text(size=12))
-# note the hot summer of 2018, which likely killed the cockle cohort
-# summer of 2011 was cool, and that previous winter was cold 
 
